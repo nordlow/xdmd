@@ -1,7 +1,5 @@
 #!/usr/bin/rdmd
 
-import std;
-
 /++ TODO: Add support for flag `-perf` that calls perf record and perf annotate
 	in a new process. Exits grazefully with Error if perf record fails
 
@@ -66,6 +64,15 @@ alias Environment = string[string];
 static immutable lstExt = `.lst`;
 static immutable dExt = `.d`;
 static immutable dbgFlag = false; // Flags for debug logging via `dbg`.
+
+import std.process : ProcessPipes, Redirect, pipeProcess, wait;
+import std.algorithm : count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit;
+import std.array : array, join, replace;
+import std.path : expandTilde, baseName, stripExtension, buildPath;
+import std.file : exists, getcwd, dirEntries, SpanMode, getSize, remove, readText, tempDir, mkdirRecurse;
+import std.stdio : stdout, stderr, File;
+import std.exception : enforce;
+import std.uuid : randomUUID;
 
 struct Task {
 	this(TaskType tt, FileName exe, Cmd cmd, CmdSwitches switches, string[] srcPaths, DirPath cwd, Redirect redirect) {
