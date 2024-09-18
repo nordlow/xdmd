@@ -1,0 +1,453 @@
+#!/usr/bin/rdmd
+
+import std;
+
+/++ TODO: Add support for flag `-perf` that calls perf record and perf annotate
+	in a new process. Exits grazefully with Error if perf record fails
+
+    TODO: loop through status of run process and forward stdout and stderr until
+    it completes. Currently it waits until the process have completed and then
+    prints everything in one go. This is now good from an interactive point of
+    view.
+
+	TODO: Process (read and remove) all .lst files in current directory that
+	have a corresponding existing .d file. This merges the two loops over .lst
+	files into one.
+
+	TODO: When -unittest -main is passed to `args`:
+		  - Disable FILE io
+	      - Disable networking on Linux by LD_PRELOAD
+	      - Generate a main-fail that imports the .d files passed in args and run only the pure unittests
+		  - -unitest=attributes:pure
+
+	TODO: Self-recursion gives following output
+  per  601142 83.3  0.1  14:59 00:00 /home/per/.local/dlang/linux/bin64/dmd -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -d -d -d -d
+  per  601119 75.0  0.5  14:59 00:00 /home/per/.local/dlang/linux/bin64/dmd -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -d -d -d
+  per  601096 39.3  0.5  14:59 00:00 /home/per/.local/dlang/linux/bin64/dmd -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -d -d
+  per  592865 31.5  0.6  14:55 01:11 /home/per/.local/emacs-snapshot/bin/emacs -bg black -fg wheat -cr green -ms green -mm
+  per  601073 26.8  0.5  14:59 00:00 /home/per/.local/dlang/linux/bin64/dmd -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -d
+  per  601050 19.9  0.5  14:59 00:00 /home/per/.local/dlang/linux/bin64/dmd -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d
+  per  601026 16.4  0.5  14:59 00:00 /home/per/.local/dlang/linux/bin64/dmd -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d
+  per  601003 13.8  0.5  14:59 00:00 /home/per/.local/dlang/linux/bin64/dmd -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -d
+  per  600980 11.8  0.5  14:59 00:00 /home/per/.local/dlang/linux/bin64/dmd -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d -d
+  per  600957 10.6  0.5  14:59 00:00 /home/per/.local/dlang/linux/bin64/dmd -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d -d
+  per  600932  9.2  0.5  14:59 00:00 /home/per/.local/dlang/linux/bin64/dmd -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -i -vcolumns -cov -cov=ctfe -wi -debug -checkaction=context -allinst -unittest -I. -I.. -I../.. -I../../.. -preview=in -dip1000 -I/home/per/Work/phobos-next/src/ -I/home/per/.dub/packages/mir-algorithm/3.22.0/mir-algorithm/source/ -I/home/per/.dub/packages/mir-core/1.7.0/mir-core/source/ -preview=bitfields -verrors=context -main -run /tmp/flycheckAHlf4u/xdmd.d -d
+  per  495326  7.8  0.0  11:34 15:54 /usr/bin/pulseaudio --daemonize=no --log-target=journal
+  per  498090  4.9  0.6  11:34 10:06
+ +/
+
+alias Line = string;
+
+enum Op {
+	chk, ///< Check.
+	run, ///< Run.
+	lnt, ///< Lint using Dscanner.
+	all, ///< All.
+}
+
+enum TaskType {
+	chk, ///< Check.
+	run, ///< Run.
+	lnt, ///< Lint using Dscanner.
+}
+
+/++ CLI command including leading process name/path. +/
+alias Cmd = const(string)[];
+
+/++ CLI arguments exludding leading process name/path. +/
+alias CmdArgs = const(string)[];
+
+/++ CLI switches. +/
+alias CmdSwitches = const(string)[];
+
+/++ Process Environment.. +/
+alias Environment = string[string];
+
+static immutable lstExt = `.lst`;
+static immutable dExt = `.d`;
+static immutable dbgFlag = false; // Flags for debug logging via `dbg`.
+
+struct Task {
+	this(TaskType tt, FileName exe, Cmd cmd, CmdSwitches switches, string[] srcPaths, DirPath cwd, Redirect redirect) {
+		CmdArgs cmdArgs = cmd[1 .. $];
+		const ddmPath = findExecutable(FileName("ddemangled"));
+
+		// force use ldc if sanitizers has been asked for
+		static immutable sanitizeAddressFlag = "-fsanitize=address";
+		if (switches.count(sanitizeAddressFlag) >= 1) {
+			const ldmd2X = FileName(findExecutable(FileName(`ldmd2`)) ? `ldmd2` : []);
+			if (tt == TaskType.run && ldmd2X) {
+				exe = ldmd2X; // override
+			}  else {
+				cmdArgs = cmdArgs.filter!(_ => _ != sanitizeAddressFlag).array; // TODO: merge with filter below
+			}
+		}
+
+		// debug writeln("In ", cwd, ": ", tt, ": ", (exe.str ~ cmdArgs).join(' '));
+		this.tt = tt;
+		this.exe = exe;
+		final switch (tt) {
+		case TaskType.chk:
+			this.cmdArgs = cmdArgs.filter!(_ => _ != "-main" && _ != "-run").array ~ [`-o-`];
+			this.use = true;
+			break;
+		case TaskType.lnt:
+			this.cmdArgs = ["lint", "--styleCheck", "--errorFormat=digitalmars"] ~ cmdArgs.filter!(_ => _.endsWith(".d") || _.startsWith("-I")).array;
+			this.use = true;
+			break;
+		case TaskType.run:
+			this.cmdArgs = cmdArgs;
+			this.use = switches.canFind("-run") && canBeUnittested(srcPaths);
+			if (this.use)
+				this.cmdArgs ~= cmdArgs ~ "-d"; // don't show deprecations that already shown in check TaskType.chk
+			break;
+		}
+
+		this.cwd = cwd;
+		auto ppArgs = [ddmPath.str, exe.str] ~ this.cmdArgs;
+		debug writeln("args:", ppArgs.join(' '));
+		this.redirect = redirect;
+
+		// modify environment
+		Environment env;
+		const libmimallocPath = Path("~/.local/mimalloc-snapshot/lib/libmimalloc.so");
+		const libmimallocAbsPath = Path(libmimallocPath.str.expandTilde);
+		if (libmimallocAbsPath.str.exists) {
+			// with LDC this reduces check time by 12.5%
+			if (dbgFlag) dbg("xdmd: Overriding default C allocator with ", libmimallocPath);
+			env["LD_PRELOAD"] = libmimallocAbsPath.str;
+		}
+
+		this.pp = pipeProcess(ppArgs, redirect, env);
+	}
+	TaskType tt;
+	FileName exe;
+	CmdArgs cmdArgs;
+	bool use;
+	DirPath cwd;
+	ProcessPipes pp;
+	char[] outLines;
+	char[] errLines;
+	Redirect redirect;
+}
+
+int main(scope Cmd cmd) {
+	const argsOk = cmd.count("xdmd.d") <= 1 && cmd.count("-run") <= 1 && cmd.count("-main") <= 1;
+
+	enforce(argsOk, "Potential self-recursion, where args: " ~ cmd.join(' '));
+
+	// analyze CLI arguments
+	bool selfFlag = false;
+	string[] srcPaths; // source file paths
+	string[] iDirs; // import path dirs
+	CmdSwitches switches;
+	foreach (const ref c; cmd[1 .. $]) {
+		if (c.baseName == __FILE__.baseName)
+			selfFlag = true;
+		if (c.startsWith('-')) {
+			if (const split = c.findSplitAfter("-I")) {
+				iDirs ~= split[1].expandTilde;
+			} else {
+				switches ~= c;
+			}
+		} else {
+			srcPaths ~= c;
+		}
+	}
+	// if (dbgFlag) dbg("iDirs: ", iDirs);
+	// if (dbgFlag) dbg("switches: ", switches);
+	// if (dbgFlag) dbg("srcPath: ", srcPaths);
+
+	if (selfFlag) {
+		// if (dbgFlag) dbg("xdmd: Skipping analysis of itself for now until self-recursion has been fixed");
+		return 0;
+	}
+
+	const doRun = switches.canFind("-run") && canBeUnittested(srcPaths);
+
+	// Flags:
+	const op = doRun ? Op.run : Op.chk;
+	const cwd = DirPath(getcwd);
+
+	const ldmd2X = FileName(findExecutable(FileName(`ldmd2`)) ? `ldmd2` : []);
+	const dmdX = FileName(findExecutable(FileName(`dmd`)) ? `dmd` : []);
+	const lntX = FileName(findExecutable(FileName(`dscanner`)) ? `dscanner` : []);
+
+	const chkOn = (op == Op.chk || op == Op.all);
+	const runOn = (op == Op.run || op == Op.all) && !selfFlag;
+	const lntOn = false && (op == Op.all) && lntX; // disabled for now because too many false positives
+	const rdrOn = (op == Op.all);
+	const redirect = rdrOn ? Redirect.all : Redirect.init;
+
+	scope(exit) {
+		if (runOn && cmd.canFind(`-cov`) && srcPaths.length >= 1) {
+			const lastLstFileName = srcPaths[$-1].baseName.stripExtension ~ ".lst";
+			// clean up .lst files
+			foreach (ref de; cwd.str.dirEntries(SpanMode.shallow)) {
+				if (!de.isDir && de.name.endsWith(lstExt)) {
+					const bn = de.name.baseName;
+					if ((lastLstFileName && bn == lastLstFileName) ||
+						bn == "__main.lst" ||
+						bn.canFind("-")) {
+						if (bn.getSize == 0) {
+							// writeln("Removing ", de.name);
+							de.name.remove();
+							continue;
+						}
+						// TODO: functionize
+						size_t cnt = 0;
+						foreach (const line; File(de.name).byLine)
+							if (line[7] == '|' || line[8] == '|' || line[9] == '|')
+								cnt += 1;
+						if (cnt >= 1) {
+							// writeln("Removing ", de.name);
+							de.name.remove();
+							continue;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	const chkX = ldmd2X; // LDC fastest at check
+	const runX = dmdX; // DMD fastest at compiling and linking
+
+	if (dbgFlag && chkOn) dbg("xdmd: Checking on: using ", chkX);
+	if (dbgFlag && runOn) dbg("xdmd: Running on: using ", runX);
+	if (dbgFlag && lntOn) dbg("xdmd: Linting on: using ", lntX);
+	if (dbgFlag && rdrOn) dbg("xdmd: Redirecting on");
+
+	auto chk = chkOn ? Task(TaskType.chk, chkX, cmd, switches, srcPaths, cwd, redirect) : Task.init;
+	auto run = runOn ? Task(TaskType.run, runX, cmd, switches, srcPaths, cwd, redirect) : Task.init;
+	// linter
+	auto lnt = lntOn ? Task(TaskType.lnt, lntX, cmd, switches, srcPaths, cwd, Redirect.all) : Task.init;
+
+	const bool chkExitEarlyUponFailure = false; // TODO: Doesn't seem to be needed at the moment.
+	int chkES; // check exit status
+	if (chk.use) {
+		chkES = chk.pp.pid.wait();
+		// if (dbgFlag) dbg("xdmd: Check exit status: ", chkES);
+		if (redirect != Redirect.init) {
+			// if (dbgFlag) dbg("xdmd: Check is redirected");
+			chk.outLines = chk.pp.stdout.byLine.join('\n');
+			chk.errLines = chk.pp.stderr.byLine.join('\n');
+			if (chk.outLines.length)
+				stdout.writeln(chk.outLines);
+			if (chk.errLines.length)
+				stderr.writeln(chk.errLines);
+		}
+		if (chkExitEarlyUponFailure && chkES) {
+			if (dbgFlag) dbg("xdmd: Exiting eagerly because check failed, potentially aborting other phases");
+			return chkES; // early failure return
+		}
+	}
+
+	int lntES; // lint exit status
+	if (lnt.use) {
+		lntES = lnt.pp.pid.wait();
+		// if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
+		if (lnt.redirect != Redirect.init) {
+			// if (dbgFlag) dbg("xdmd: Lint is redirected");
+			foreach (ref outLine; lnt.pp.stdout.byLine)
+				if (!outLine.isIgnoredMessage)
+					stderr.writeln(outLine); // forward to stderr for now
+			foreach (ref errLine; lnt.pp.stderr.byLine)
+				if (!errLine.isIgnoredMessage)
+					stderr.writeln(errLine); // forward to stderr for now
+		}
+	}
+
+	int runES; // run exit status
+	if (run.use) {
+		runES = run.pp.pid.wait();
+		// if (dbgFlag) dbg("xdmd: Run exit status: ", runES);
+		if (redirect != Redirect.init) {
+			// if (dbgFlag) dbg("xdmd: Run is redirected");
+			auto runOut = run.pp.stdout.byLine.join('\n');
+			auto runErr = run.pp.stderr.byLine.join('\n');
+			runOut.skipOver(chk.outLines);
+			runErr.skipOver(chk.errLines);
+			if (runOut.length)
+				stdout.writeln(runOut);
+			if (runErr.length)
+				stderr.writeln(runErr);
+		}
+		if (runES) {
+			// don't 'return runES here to let lntES complete
+		}
+
+		// TODO: show other files
+
+		/+ Show coverage only upon no failures to prevent FlyCheck and other
+		   checkers from choking and becoming disabled locally in buffer.
+		   TODO: Adjust to scanning output for parse errors when
+            `redirect != Redirect.init` as a exit status of one might signal
+           something other than a failing `assert` or `enforce`. +/
+		if (runES != 1 &&
+			cmd.canFind(`-cov`)) {
+			// process .lst files
+			foreach (const srcPath; srcPaths) {
+				if (!srcPath.isDSourcePathCLIArgument)
+					continue;
+				if (srcPath.isDMainOrNoUnittestsFile()) {
+					stderr.writeln(srcPath, "(", 1, "): Coverage: Skipping analysis because of presence of `main` function and absence of any `unittest`s");
+					continue;
+				}
+				const lst = srcPath.replace(`/`, `-`).stripExtension ~ lstExt;
+				try {
+					size_t nr;
+					foreach (const line; File(lst).byLine) {
+						if (line.startsWith(`0000000|`))
+							stderr.writeln(srcPath, "(", nr + 1, "): Coverage: Line not covered by unitests");
+						nr += 1;
+					}
+				} catch (Exception _) {
+					// Ok if not exists
+					// if (dbgFlag) dbg("xdmd: Missing coverage file, ", lst);
+				}
+			}
+		}
+	}
+
+	if (chkES != 0)
+		return chkES;
+
+	if (runES != 0)
+		return runES;
+
+	// don't care about lntES for now
+	if (lntES != 0) {
+		if (lntES == 1) {
+			// don't forward "normal" exit status because it's only a linter
+		} else {
+			return lntES;
+		}
+	}
+
+	return 0;
+}
+
+private bool isIgnoredMessage(in char[] msg) pure nothrow @nogc {
+	if (msg.canFind("Warning: ")) {
+		if (msg.canFind("Public declaration") && msg.canFind("is undocumented"))
+			return true;
+		if (msg.canFind("Line is longer than") && msg.canFind("characters"))
+			return true;
+	}
+	return false;
+}
+
+private bool canBeUnittested(scope CmdArgs srcPaths) {
+	foreach (const srcPath; srcPaths)
+		if (srcPath.isDMainOrNoUnittestsFile())
+			return false;
+	return true;
+}
+
+private bool isDMainOrNoUnittestsFile(in char[] path) {
+	if (!path.isDSourcePathCLIArgument)
+		return false;
+	const text = path.readText;
+	// TODO: process (treesit) nodes of parseTree(text) instead
+	return text.canFind("main(string[] args)") || !text.canFindAtLeastOneUnittest;
+}
+
+private bool canFindAtLeastOneUnittest(scope const(char)[] src) {
+	while (auto split = src.findSplit("unittest")) {
+		const prefix = split[0];
+		const suffix = split[2];
+		import std.ascii : isAlphaNum;
+		const isAtSymbolStart = prefix.length == 0 || !(prefix[$-1].isAlphaNum || prefix[$-1] == '_');
+		const isAtSymbolEnd = suffix.length == 0 || !(suffix[0].isAlphaNum || suffix[0] == '_');
+		if (isAtSymbolStart && split[1].length != 0 && isAtSymbolEnd)
+			return true;
+		src = split[2];
+	}
+	return false;
+}
+
+private bool isDSourcePathCLIArgument(in char[] arg) @safe pure nothrow @nogc {
+	return (!arg.startsWith('-')) && arg.endsWith(dExt);
+}
+
+void dbg(Args...)(scope auto ref Args args, in string file = __FILE_FULL_PATH__, const uint line = __LINE__) {
+	stderr.writeln(file, "(", line, "):", " Debug: ", args, "");
+}
+
+private string mkdirRandom() {
+    const dirName = buildPath(tempDir(), "xdmd-" ~ randomUUID().toString());
+    dirName.mkdirRecurse();
+    return dirName;
+}
+
+/++ Path.
+
+	The concept of a "pure path" doesn't need to be modelled in D as
+	it has `pure` functions.  See
+	https://docs.python.org/3/library/pathlib.html#pure-paths.
+
+	See: SUMO:`ComputerPath`.
+ +/
+struct Path {
+	this(string str) pure nothrow @nogc {
+		this.str = str;
+	}
+	string str;
+pure nothrow @nogc:
+	bool opCast(T : bool)() const scope => str !is null;
+	string toString() const @property => str;
+}
+
+/++ File (local) name.
+ +/
+struct FileName {
+	this(string str, in bool normalize = false) pure nothrow @nogc {
+		this.str = str;
+	}
+	string str;
+	bool opCast(T : bool)() const scope pure nothrow @nogc => str !is null;
+	string toString() inout return scope @property pure nothrow @nogc => str;
+}
+
+/++ (Regular) File path.
+	See: https://hackage.haskell.org/package/filepath-1.5.0.0/docs/System-FilePath.html#t:FilePath
+ +/
+struct FilePath {
+	this(string str) pure nothrow @nogc {
+		this.path = Path(str);
+	}
+	Path path;
+	alias path this;
+}
+
+struct DirPath {
+	this(string str) pure nothrow @nogc {
+		this.path = Path(str);
+	}
+	Path path;
+	alias path this;
+}
+
+/++ Find path for `a` (or `FilePath.init` if not found) in `pathVariableName`.
+	TODO: Add caching of result and detect changes via inotify.
+ +/
+private FilePath findExecutable(FileName a, scope const(char)[] pathVariableName = "PATH") {
+	return findFileInPath(a, "PATH");
+}
+
+/++ Find path for `a` (or `FilePath.init` if not found) in `pathVariableName`.
+	TODO: Add caching of result and detect changes via inotify.
+ +/
+FilePath findFileInPath(FileName a, scope const(char)[] pathVariableName) {
+	import std.algorithm : splitter;
+	import std.process : environment;
+	const envPATH = environment.get(pathVariableName, "");
+	foreach (const p; envPATH.splitter(':')) {
+		import std.path : buildPath;
+		const path = p.buildPath(a.str);
+		if (path.exists)
+			return FilePath(path); // pick first match
+	}
+	return typeof(return).init;
+}
