@@ -10,5 +10,6 @@ of accompaning coverage analysis results.
 `./xdmd -checkaction=context -allinst -unittest -cov -cov=ctfe -main -run test.d`
 
 ## TODO
-- Modify `dmd` to emit warning-style diagnostics instead of `.lst` files via say
+- Extend `dmd` to emit warning-style diagnostics instead of `.lst` files via say
   `-cov=diagnose`.
+- Extend `dmd`to support `-unitest=modules...` to speed up `dmd -i`.
