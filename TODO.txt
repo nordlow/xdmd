@@ -1,3 +1,9 @@
+TODO: Diagnostics: `cov=diagnose`.
+
+TODO: Select tests based on purity (or even side-effects)
+
+TODO: Having `-unitest=modules...` would speed up `dmd -i`
+
 TODO: Add support for flag `-perf` that calls perf record and perf annotate
 in a new process. Exits grazefully with Error if perf record fails
 
