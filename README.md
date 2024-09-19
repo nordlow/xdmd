@@ -7,7 +7,7 @@ of accompaning coverage analysis results.
 
 ## Usage
 
-`./xdmd -checkaction\=context -allinst -unittest -cov -cov=ctfe -main -run test.d`
+`./xdmd -checkaction=context -allinst -unittest -cov -cov=ctfe -main -run test.d`
 
 ## TODO
 - Modify `dmd` to emit warning-style diagnostics instead of `.lst` files via say
