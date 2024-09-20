@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+exec "$@" > >(ddemangle) 2> >(ddemangle)
