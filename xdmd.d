@@ -150,8 +150,9 @@ int main(scope Cmd cmd) {
 
 	const onChk = (op == Op.chk || op == Op.all);
 	const onRun = (op == Op.run || op == Op.all) && !selfFlag;
-	const onLnt = false && (op == Op.all) && exeDscanner; // disabled for now because too many false positives
-	const onRdr = (op == Op.all);
+	const onLnt = (op == Op.run || op == Op.lnt || op == Op.all) && exeDscanner;
+	const numOn = onChk + onRun + onLnt;
+	const onRdr = numOn >= 2;
 	const redirect = onRdr ? Redirect.all : Redirect.init;
 
 	scope(exit) {
@@ -185,11 +186,8 @@ int main(scope Cmd cmd) {
 		}
 	}
 
-	import std.stdio;
 	const exeChk = either(exeLDMD2, exeDMD); // `ldmd2` fastest at check
-	writeln(exeChk);
 	const exeRun = either(exeDMD, exeLDMD2); // `dmd` fastest at compiling/building
-	writeln(exeRun);
 
 	if (dbgFlag && onChk) dbg("xdmd: Checking on: using ", exeChk);
 	if (dbgFlag && onRun) dbg("xdmd: Running on: using ", exeRun);
@@ -205,9 +203,9 @@ int main(scope Cmd cmd) {
 	int chkES; // check exit status
 	if (chk.use) {
 		chkES = chk.pp.pid.wait();
-		// if (dbgFlag) dbg("xdmd: Check exit status: ", chkES);
+		if (dbgFlag) dbg("xdmd: Check exit status: ", chkES);
 		if (redirect != Redirect.init) {
-			// if (dbgFlag) dbg("xdmd: Check is redirected");
+			if (dbgFlag) dbg("xdmd: Check is redirected");
 			chk.outLines = chk.pp.stdout.byLine.join('\n');
 			chk.errLines = chk.pp.stderr.byLine.join('\n');
 			if (chk.outLines.length)
@@ -224,24 +222,30 @@ int main(scope Cmd cmd) {
 	int lntES; // lint exit status
 	if (lnt.use) {
 		lntES = lnt.pp.pid.wait();
-		// if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
+		if (lntES == -11) {
+			warn(exeDscanner, " failed with exit status ", lntES, " (segmentation fault)");
+		}
+		if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
 		if (lnt.redirect != Redirect.init) {
-			// if (dbgFlag) dbg("xdmd: Lint is redirected");
-			foreach (ref outLine; lnt.pp.stdout.byLine)
-				if (!outLine.isIgnoredMessage)
+			foreach (ref outLine; lnt.pp.stdout.byLine) {
+				if (!outLine.isIgnoredDscannerMessage) {
 					stderr.writeln(outLine); // forward to stderr for now
-			foreach (ref errLine; lnt.pp.stderr.byLine)
-				if (!errLine.isIgnoredMessage)
+				}
+			}
+			foreach (ref errLine; lnt.pp.stderr.byLine) {
+				if (!errLine.isIgnoredDscannerMessage) {
 					stderr.writeln(errLine); // forward to stderr for now
+				}
+			}
 		}
 	}
 
 	int runES; // run exit status
 	if (run.use) {
 		runES = run.pp.pid.wait();
-		// if (dbgFlag) dbg("xdmd: Run exit status: ", runES);
+		if (dbgFlag) dbg("xdmd: Run exit status: ", runES);
 		if (redirect != Redirect.init) {
-			// if (dbgFlag) dbg("xdmd: Run is redirected");
+			if (dbgFlag) dbg("xdmd: Run is redirected");
 			auto runOut = run.pp.stdout.byLine.join('\n');
 			auto runErr = run.pp.stderr.byLine.join('\n');
 			runOut.skipOver(chk.outLines);
@@ -282,7 +286,7 @@ int main(scope Cmd cmd) {
 					}
 				} catch (Exception _) {
 					// Ok if not exists
-					// if (dbgFlag) dbg("xdmd: Missing coverage file, ", lst);
+					if (dbgFlag) dbg("xdmd: Missing coverage file, ", lst);
 				}
 			}
 		}
@@ -296,8 +300,10 @@ int main(scope Cmd cmd) {
 
 	// don't care about lntES for now
 	if (lntES != 0) {
-		if (lntES == 1) {
-			// don't forward "normal" exit status because it's only a linter
+		if (lntES == -11) {
+		 	// ignore segmentation fault for now
+		} else if (lntES == 1) { // there were warning
+			// skip forwarding of "normal" exit status for now because it's only a linter
 		} else {
 			return lntES;
 		}
@@ -306,13 +312,15 @@ int main(scope Cmd cmd) {
 	return 0;
 }
 
-private bool isIgnoredMessage(in char[] msg) pure nothrow @nogc {
-	if (msg.canFind("Warning: ")) {
-		if (msg.canFind("Public declaration") && msg.canFind("is undocumented"))
-			return true;
-		if (msg.canFind("Line is longer than") && msg.canFind("characters"))
-			return true;
-	}
+private bool isIgnoredDscannerMessage(in char[] msg) pure nothrow @nogc {
+	if (!msg.canFind("Warning: "))
+		return false;
+	if (msg.canFind("Public declaration") && msg.canFind("is undocumented"))
+		return true;
+	if (msg.canFind("Line is longer than") && msg.canFind("characters"))
+		return true;
+	if (msg.canFind("Template name") && msg.canFind("does not match style guidelines"))
+		return true;
 	return false;
 }
 
@@ -351,6 +359,10 @@ private bool isDSourcePathCLIArgument(in char[] arg) @safe pure nothrow @nogc {
 
 void dbg(Args...)(scope auto ref Args args, in string file = __FILE_FULL_PATH__, const uint line = __LINE__) {
 	stderr.writeln(file, "(", line, "):", " Debug: ", args, "");
+}
+
+void warn(Args...)(scope auto ref Args args, in string file = __FILE_FULL_PATH__, const uint line = __LINE__) {
+	stderr.writeln(file, "(", line, "):", " Warning: ", args, "");
 }
 
 private string mkdirRandom() {
