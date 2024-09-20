@@ -77,7 +77,7 @@ struct Task {
 		}
 
 		this.cwd = cwd;
-		auto ppArgs = [ddmPath.str, exe.str] ~ this.cmdArgs;
+		auto ppArgs = (ddmPath ? [ddmPath.str] : []) ~ [exe.str] ~ this.cmdArgs;
 		debug writeln("args:", ppArgs.join(' '));
 		this.redirect = redirect;
 
