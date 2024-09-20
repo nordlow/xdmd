@@ -48,9 +48,9 @@ struct Task {
 		// force use ldc if sanitizers has been asked for
 		static immutable sanitizeAddressFlag = "-fsanitize=address";
 		if (switches.count(sanitizeAddressFlag) >= 1) {
-			const ldmd2X = FileName(findExecutable(FileName(`ldmd2`)) ? `ldmd2` : []);
-			if (tt == TaskType.run && ldmd2X) {
-				exe = ldmd2X; // override
+			const exeLDMD2 = FileName(findExecutable(FileName(`ldmd2`)) ? `ldmd2` : []);
+			if (tt == TaskType.run && exeLDMD2) {
+				exe = exeLDMD2; // override
 			}  else {
 				cmdArgs = cmdArgs.filter!(_ => _ != sanitizeAddressFlag).array; // TODO: merge with filter below
 			}
@@ -142,18 +142,18 @@ int main(scope Cmd cmd) {
 	const op = doRun ? Op.run : Op.chk;
 	const cwd = DirPath(getcwd);
 
-	const ldmd2X = FileName(findExecutable(FileName(`ldmd2`)) ? `ldmd2` : []);
-	const dmdX = FileName(findExecutable(FileName(`dmd`)) ? `dmd` : []);
-	const lntX = FileName(findExecutable(FileName(`dscanner`)) ? `dscanner` : []);
+	const exeLDMD2 = FileName(findExecutable(FileName(`ldmd2`)) ? `ldmd2` : []);
+	const exeDMD = FileName(findExecutable(FileName(`dmd`)) ? `dmd` : []);
+	const exeDscanner = FileName(findExecutable(FileName(`dscanner`)) ? `dscanner` : []);
 
-	const chkOn = (op == Op.chk || op == Op.all);
-	const runOn = (op == Op.run || op == Op.all) && !selfFlag;
-	const lntOn = false && (op == Op.all) && lntX; // disabled for now because too many false positives
-	const rdrOn = (op == Op.all);
-	const redirect = rdrOn ? Redirect.all : Redirect.init;
+	const onChk = (op == Op.chk || op == Op.all);
+	const onRun = (op == Op.run || op == Op.all) && !selfFlag;
+	const onLnt = false && (op == Op.all) && exeDscanner; // disabled for now because too many false positives
+	const onRdr = (op == Op.all);
+	const redirect = onRdr ? Redirect.all : Redirect.init;
 
 	scope(exit) {
-		if (runOn && cmd.canFind(`-cov`) && srcPaths.length >= 1) {
+		if (onRun && cmd.canFind(`-cov`) && srcPaths.length >= 1) {
 			const lastLstFileName = srcPaths[$-1].baseName.stripExtension ~ ".lst";
 			// clean up .lst files
 			foreach (ref de; cwd.str.dirEntries(SpanMode.shallow)) {
@@ -183,18 +183,18 @@ int main(scope Cmd cmd) {
 		}
 	}
 
-	const chkX = ldmd2X; // LDC fastest at check
-	const runX = dmdX; // DMD fastest at compiling and linking
+	const exeChk = exeLDMD2; // LDC fastest at check
+	const exeRun = exeDMD; // DMD fastest at compiling and linking
 
-	if (dbgFlag && chkOn) dbg("xdmd: Checking on: using ", chkX);
-	if (dbgFlag && runOn) dbg("xdmd: Running on: using ", runX);
-	if (dbgFlag && lntOn) dbg("xdmd: Linting on: using ", lntX);
-	if (dbgFlag && rdrOn) dbg("xdmd: Redirecting on");
+	if (dbgFlag && onChk) dbg("xdmd: Checking on: using ", exeChk);
+	if (dbgFlag && onRun) dbg("xdmd: Running on: using ", exeRun);
+	if (dbgFlag && onLnt) dbg("xdmd: Linting on: using ", exeDscanner);
+	if (dbgFlag && onRdr) dbg("xdmd: Redirecting on");
 
-	auto chk = chkOn ? Task(TaskType.chk, chkX, cmd, switches, srcPaths, cwd, redirect) : Task.init;
-	auto run = runOn ? Task(TaskType.run, runX, cmd, switches, srcPaths, cwd, redirect) : Task.init;
+	auto chk = onChk ? Task(TaskType.chk, exeChk, cmd, switches, srcPaths, cwd, redirect) : Task.init;
+	auto run = onRun ? Task(TaskType.run, exeRun, cmd, switches, srcPaths, cwd, redirect) : Task.init;
 	// linter
-	auto lnt = lntOn ? Task(TaskType.lnt, lntX, cmd, switches, srcPaths, cwd, Redirect.all) : Task.init;
+	auto lnt = onLnt ? Task(TaskType.lnt, exeDscanner, cmd, switches, srcPaths, cwd, Redirect.all) : Task.init;
 
 	const bool chkExitEarlyUponFailure = false; // TODO: Doesn't seem to be needed at the moment.
 	int chkES; // check exit status
