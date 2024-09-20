@@ -32,7 +32,7 @@ static immutable dExt = `.d`;
 static immutable dbgFlag = false; // Flags for debug logging via `dbg`.
 
 import std.process : ProcessPipes, Redirect, pipeProcess, wait;
-import std.algorithm : count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit;
+import std.algorithm : count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit, either;
 import std.array : array, join, replace;
 import std.path : expandTilde, baseName, stripExtension, buildPath;
 import std.file : exists, getcwd, dirEntries, SpanMode, getSize, remove, readText, tempDir, mkdirRecurse;
@@ -142,6 +142,8 @@ int main(scope Cmd cmd) {
 	const op = doRun ? Op.run : Op.chk;
 	const cwd = DirPath(getcwd);
 
+	// Scan for presence of compiler/tools/linter executables
+	const exeLDC2 = FileName(findExecutable(FileName(`ldc2`)) ? `ldc2` : []);
 	const exeLDMD2 = FileName(findExecutable(FileName(`ldmd2`)) ? `ldmd2` : []);
 	const exeDMD = FileName(findExecutable(FileName(`dmd`)) ? `dmd` : []);
 	const exeDscanner = FileName(findExecutable(FileName(`dscanner`)) ? `dscanner` : []);
@@ -183,8 +185,11 @@ int main(scope Cmd cmd) {
 		}
 	}
 
-	const exeChk = exeLDMD2; // LDC fastest at check
-	const exeRun = exeDMD; // DMD fastest at compiling and linking
+	import std.stdio;
+	const exeChk = either(exeLDMD2, exeDMD); // `ldmd2` fastest at check
+	writeln(exeChk);
+	const exeRun = either(exeDMD, exeLDMD2); // `dmd` fastest at compiling/building
+	writeln(exeRun);
 
 	if (dbgFlag && onChk) dbg("xdmd: Checking on: using ", exeChk);
 	if (dbgFlag && onRun) dbg("xdmd: Running on: using ", exeRun);
