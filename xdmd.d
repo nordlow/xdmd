@@ -6,6 +6,7 @@ enum Op {
 	chk, ///< Check.
 	run, ///< Run.
 	lnt, ///< Lint using Dscanner.
+	drn, ///< Run test in dmd.
 	all, ///< All.
 }
 
@@ -13,6 +14,7 @@ enum TaskType {
 	chk, ///< Check.
 	run, ///< Run.
 	lnt, ///< Lint using Dscanner.
+	drn,
 }
 
 /++ CLI command including leading process name/path. +/
@@ -29,7 +31,7 @@ alias Environment = string[string];
 
 static immutable lstExt = `.lst`;
 static immutable dExt = `.d`;
-static immutable dbgFlag = false; // Flags for debug logging via `dbg`.
+static immutable dbgFlag = true; // Flags for debug logging via `dbg`.
 
 import std.process : ProcessPipes, Redirect, pipeProcess, wait;
 import std.algorithm : count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit, either;
@@ -41,14 +43,14 @@ import std.exception : enforce;
 import std.uuid : randomUUID;
 
 struct Task {
-	this(TaskType tt, FileName exe, Cmd cmd, CmdSwitches switches, string[] srcPaths, DirPath cwd, Redirect redirect) {
+	this(TaskType tt, FilePath exe, Cmd cmd, CmdSwitches switches, string[] srcPaths, DirPath cwd, Redirect redirect) {
 		CmdArgs cmdArgs = cmd[1 .. $];
 		const ddmPath = findExecutable(FileName("ddemangled"));
 
 		// force use ldc if sanitizers has been asked for
 		static immutable sanitizeAddressFlag = "-fsanitize=address";
 		if (switches.count(sanitizeAddressFlag) >= 1) {
-			const exeLDMD2 = FileName(findExecutable(FileName(`ldmd2`)) ? `ldmd2` : []);
+			const exeLDMD2 = findExecutable(FileName(`ldmd2`));
 			if (tt == TaskType.run && exeLDMD2) {
 				exe = exeLDMD2; // override
 			}  else {
@@ -58,7 +60,6 @@ struct Task {
 
 		// debug writeln("In ", cwd, ": ", tt, ": ", (exe.str ~ cmdArgs).join(' '));
 		this.tt = tt;
-		this.exe = exe;
 		final switch (tt) {
 		case TaskType.chk:
 			this.cmdArgs = cmdArgs.filter!(_ => _ != "-main" && _ != "-run").array ~ [`-o-`];
@@ -66,6 +67,10 @@ struct Task {
 			break;
 		case TaskType.lnt:
 			this.cmdArgs = ["lint", "--styleCheck", "--errorFormat=digitalmars"] ~ cmdArgs.filter!(_ => _.endsWith(".d") || _.startsWith("-I")).array;
+			this.use = true;
+			break;
+		case TaskType.drn:
+			this.cmdArgs = cmdArgs.filter!(_ => _.endsWith(".d")).array;
 			this.use = true;
 			break;
 		case TaskType.run:
@@ -94,7 +99,6 @@ struct Task {
 		this.pp = pipeProcess(ppArgs, redirect, env);
 	}
 	TaskType tt;
-	FileName exe;
 	CmdArgs cmdArgs;
 	bool use;
 	DirPath cwd;
@@ -112,6 +116,7 @@ int main(scope Cmd cmd) {
 	// analyze CLI arguments
 	bool selfFlag = false;
 	string[] srcPaths; // source file paths
+	dbg(srcPaths);
 	string[] iDirs; // import path dirs
 	CmdSwitches switches;
 	foreach (const ref c; cmd[1 .. $]) {
@@ -143,15 +148,17 @@ int main(scope Cmd cmd) {
 	const cwd = DirPath(getcwd);
 
 	// Scan for presence of compiler/tools/linter executables
-	const exeLDC2 = FileName(findExecutable(FileName(`ldc2`)) ? `ldc2` : []);
-	const exeLDMD2 = FileName(findExecutable(FileName(`ldmd2`)) ? `ldmd2` : []);
-	const exeDMD = FileName(findExecutable(FileName(`dmd`)) ? `dmd` : []);
-	const exeDscanner = FileName(findExecutable(FileName(`dscanner`)) ? `dscanner` : []);
+	const exeLDC2 = findExecutable(FileName(`ldc2`));
+	const exeLDMD2 = findExecutable(FileName(`ldmd2`));
+	const exeDMD = findExecutable(FileName(`dmd`));
+	const exeDscanner = findExecutable(FileName(`dscanner`));
+	const exeRunD = FilePath("/home/per/Work/dmd/compiler/test/run.d");
 
 	const onChk = (op == Op.chk || op == Op.all);
 	const onRun = (op == Op.run || op == Op.all) && !selfFlag;
 	const onLnt = (op == Op.run || op == Op.lnt || op == Op.all) && exeDscanner;
-	const numOn = onChk + onRun + onLnt;
+	const onDrn = false && exeRunD.str.exists; // TODO: Any source file is under
+	const numOn = onChk + onRun + onLnt + onDrn;
 	const onRdr = numOn >= 2;
 	const redirect = onRdr ? Redirect.all : Redirect.init;
 
@@ -188,16 +195,19 @@ int main(scope Cmd cmd) {
 
 	const exeChk = either(exeLDMD2, exeDMD); // `ldmd2` fastest at check
 	const exeRun = either(exeDMD, exeLDMD2); // `dmd` fastest at compiling/building
+	const exeDrn = FilePath("/home/per/Work/dmd/compiler/test/run.d"); // TODO: Lookup relative path instead
 
 	if (dbgFlag && onChk) dbg("xdmd: Checking on: using ", exeChk);
 	if (dbgFlag && onRun) dbg("xdmd: Running on: using ", exeRun);
 	if (dbgFlag && onLnt) dbg("xdmd: Linting on: using ", exeDscanner);
+	if (dbgFlag && onLnt) dbg("xdmd: Running test on: using ", exeDrn);
 	if (dbgFlag && onRdr) dbg("xdmd: Redirecting on");
 
 	auto chk = onChk ? Task(TaskType.chk, exeChk, cmd, switches, srcPaths, cwd, redirect) : Task.init;
 	auto run = onRun ? Task(TaskType.run, exeRun, cmd, switches, srcPaths, cwd, redirect) : Task.init;
 	// linter
 	auto lnt = onLnt ? Task(TaskType.lnt, exeDscanner, cmd, switches, srcPaths, cwd, Redirect.all) : Task.init;
+	auto drn = onDrn ? Task(TaskType.drn, exeDrn, cmd, switches, srcPaths, cwd, Redirect.all) : Task.init;
 
 	const bool chkExitEarlyUponFailure = false; // TODO: Doesn't seem to be needed at the moment.
 	int chkES; // check exit status
