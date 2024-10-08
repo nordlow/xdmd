@@ -116,7 +116,6 @@ int main(scope Cmd cmd) {
 	// analyze CLI arguments
 	bool selfFlag = false;
 	string[] srcPaths; // source file paths
-	dbg(srcPaths);
 	string[] iDirs; // import path dirs
 	CmdSwitches switches;
 	foreach (const ref c; cmd[1 .. $]) {
