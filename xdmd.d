@@ -113,24 +113,29 @@ int main(scope Cmd cmd) {
 
 	enforce(argsOk, "Potential self-recursion, where args: " ~ cmd.join(' '));
 
-	// analyze CLI arguments
+	// analyze D source arguments
 	bool selfFlag = false;
 	string[] srcPaths; // source file paths
-	string[] iDirs; // import path dirs
-	CmdSwitches switches;
 	foreach (const ref c; cmd[1 .. $]) {
+		if (!isDSourcePathCLIArgument(c))
+			continue;
 		if (c.baseName == __FILE__.baseName)
 			selfFlag = true;
+		srcPaths ~= c;
+	}
+
+	// analyze import paths
+	string[] iDirs;
+	CmdSwitches switches;
+	foreach (const ref c; cmd[1 .. $]) {
 		if (c.startsWith('-')) {
-			if (const split = c.findSplitAfter("-I")) {
+			if (const split = c.findSplitAfter("-I"))
 				iDirs ~= split[1].expandTilde;
-			} else {
+			else
 				switches ~= c;
-			}
-		} else {
-			srcPaths ~= c;
 		}
 	}
+
 	// if (dbgFlag) dbg("iDirs: ", iDirs);
 	// if (dbgFlag) dbg("switches: ", switches);
 	// if (dbgFlag) dbg("srcPath: ", srcPaths);
@@ -141,6 +146,7 @@ int main(scope Cmd cmd) {
 	}
 
 	const doRun = switches.canFind("-run") && canBeUnittested(srcPaths);
+	const doCov = switches.canFind("-cov") && canBeUnittested(srcPaths);
 
 	// Flags:
 	const op = doRun ? Op.run : Op.chk;
