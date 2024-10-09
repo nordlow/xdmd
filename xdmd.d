@@ -236,14 +236,14 @@ int main(scope Cmd cmd) {
 		}
 		if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
 		if (lnt.redirect != Redirect.init) {
-			foreach (ref outLine; lnt.pp.stdout.byLine) {
-				if (!outLine.isIgnoredDscannerMessage) {
-					stderr.writeln(outLine); // forward to stderr for now
+			foreach (ref ln; lnt.pp.stdout.byLine) {
+				if (const lnF = ln.filterDscannerMessage) {
+					stderr.writeln(lnF); // forward to stderr for now
 				}
 			}
-			foreach (ref errLine; lnt.pp.stderr.byLine) {
-				if (!errLine.isIgnoredDscannerMessage) {
-					stderr.writeln(errLine); // forward to stderr for now
+			foreach (ref ln; lnt.pp.stderr.byLine) {
+				if (const lnF = ln.filterDscannerMessage) {
+					stderr.writeln(lnF); // forward to stderr for now
 				}
 			}
 		}
@@ -321,22 +321,28 @@ int main(scope Cmd cmd) {
 	return 0;
 }
 
-private bool isIgnoredDscannerMessage(in char[] msg) pure nothrow @nogc {
+private const(char)[] filterDscannerMessage(in char[] msg) pure nothrow {
 	if (!msg.canFind("Warning: "))
-		return false;
+		return [];
+	if (msg.canFind("Parameter _") &&
+		msg.canFind("is never used"))
+		return [];
+	if (msg.canFind("Parameter ") &&
+		msg.canFind("is never used"))
+		return msg ~ " Prefix parameter named with underscore to ignore";
 	if (msg.canFind("Variable") &&
 		msg.canFind("is never modified and could have been declared const or immutable"))
-		return true; // currently gives to many false positives
+		return []; // currently gives to many false positives
 	if (msg.canFind("Public declaration") &&
 		msg.canFind("is undocumented"))
-		return true;
+		return [];
 	if (msg.canFind("Line is longer than") &&
 		msg.canFind("characters"))
-		return true;
+		return [];
 	if (msg.canFind("Template name") &&
 		msg.canFind("does not match style guidelines"))
-		return true;
-	return false;
+		return [];
+	return msg;
 }
 
 private bool canBeUnittested(scope CmdArgs srcPaths) {
