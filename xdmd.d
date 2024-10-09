@@ -331,7 +331,7 @@ private const(char)[] filterDscannerMessage(return const(char)[] msg) pure /+not
 		return [];
 	if (rest.skipOver("Parameter ") &&
 		rest.canFind("is never used"))
-		return msg ~ " Prefix parameter named with underscore to ignore";
+		return msg ~ " Prefix parameter name with underscore to ignore";
 	if (rest.skipOver("Variable") &&
 		rest.canFind("is never modified and could have been declared const or immutable"))
 		return []; // currently gives to many false positives
