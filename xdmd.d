@@ -324,11 +324,17 @@ int main(scope Cmd cmd) {
 private bool isIgnoredDscannerMessage(in char[] msg) pure nothrow @nogc {
 	if (!msg.canFind("Warning: "))
 		return false;
-	if (msg.canFind("Public declaration") && msg.canFind("is undocumented"))
+	if (msg.canFind("Variable") &&
+		msg.canFind("is never modified and could have been declared const or immutable"))
 		return true;
-	if (msg.canFind("Line is longer than") && msg.canFind("characters"))
+	if (msg.canFind("Public declaration") &&
+		msg.canFind("is undocumented"))
 		return true;
-	if (msg.canFind("Template name") && msg.canFind("does not match style guidelines"))
+	if (msg.canFind("Line is longer than") &&
+		msg.canFind("characters"))
+		return true;
+	if (msg.canFind("Template name") &&
+		msg.canFind("does not match style guidelines"))
 		return true;
 	return false;
 }
