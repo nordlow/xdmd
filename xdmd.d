@@ -326,7 +326,7 @@ private bool isIgnoredDscannerMessage(in char[] msg) pure nothrow @nogc {
 		return false;
 	if (msg.canFind("Variable") &&
 		msg.canFind("is never modified and could have been declared const or immutable"))
-		return true;
+		return true; // currently gives to many false positives
 	if (msg.canFind("Public declaration") &&
 		msg.canFind("is undocumented"))
 		return true;
