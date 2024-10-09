@@ -34,7 +34,7 @@ static immutable dExt = `.d`;
 static immutable dbgFlag = false; // Flags for debug logging via `dbg`.
 
 import std.process : ProcessPipes, Redirect, pipeProcess, wait;
-import std.algorithm : count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit, either;
+import std.algorithm : count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit, either, findSplitAfter;
 import std.array : array, join, replace;
 import std.path : expandTilde, baseName, stripExtension, buildPath;
 import std.file : exists, getcwd, dirEntries, SpanMode, getSize, remove, readText, tempDir, mkdirRecurse;
@@ -321,26 +321,28 @@ int main(scope Cmd cmd) {
 	return 0;
 }
 
-private const(char)[] filterDscannerMessage(const(char)[] msg) pure /+nothrow+/ {
-	if (!msg.canFind("Warning: "))
+private const(char)[] filterDscannerMessage(return const(char)[] msg) pure /+nothrow+/ {
+	auto split = msg.findSplitAfter("Warning: ");
+	if (!split)
 		return [];
-	if (msg.canFind("Parameter _") &&
-		msg.canFind("is never used"))
+	auto rest = split[1];
+	if (rest.skipOver("Parameter _") &&
+		rest.canFind("is never used"))
 		return [];
-	if (msg.canFind("Parameter ") &&
-		msg.canFind("is never used"))
+	if (rest.skipOver("Parameter ") &&
+		rest.canFind("is never used"))
 		return msg ~ " Prefix parameter named with underscore to ignore";
-	if (msg.canFind("Variable") &&
-		msg.canFind("is never modified and could have been declared const or immutable"))
+	if (rest.skipOver("Variable") &&
+		rest.canFind("is never modified and could have been declared const or immutable"))
 		return []; // currently gives to many false positives
-	if (msg.canFind("Public declaration") &&
-		msg.canFind("is undocumented"))
+	if (rest.skipOver("Public declaration") &&
+		rest.canFind("is undocumented"))
 		return [];
-	if (msg.canFind("Line is longer than") &&
-		msg.canFind("characters"))
+	if (rest.skipOver("Line is longer than") &&
+		rest.canFind("characters"))
 		return [];
-	if (msg.canFind("Template name") &&
-		msg.canFind("does not match style guidelines"))
+	if (rest.skipOver("Template name") &&
+		rest.canFind("does not match style guidelines"))
 		return [];
 	return msg;
 }
