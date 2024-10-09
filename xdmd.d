@@ -321,7 +321,7 @@ int main(scope Cmd cmd) {
 	return 0;
 }
 
-private const(char)[] filterDscannerMessage(in char[] msg) pure nothrow {
+private const(char)[] filterDscannerMessage(const(char)[] msg) pure /+nothrow+/ {
 	if (!msg.canFind("Warning: "))
 		return [];
 	if (msg.canFind("Parameter _") &&
