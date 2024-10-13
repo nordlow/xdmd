@@ -332,24 +332,36 @@ private const(char)[] filterDscannerMessage(return const(char)[] msg) pure /+not
 	if (!split)
 		return [];
 	auto rest = split[1];
-	if (rest.skipOver("Parameter _") &&
+
+	if ((rest.skipOver("Parameter _") ||
+		 rest.skipOver("Variable _")) &&
 		rest.canFind("is never used"))
 		return [];
+
 	if (rest.skipOver("Parameter ") &&
 		rest.canFind("is never used"))
 		return msg ~ " Prefix parameter name with underscore to ignore";
+
+	if (rest.skipOver("Variable ") &&
+		rest.canFind("is never used"))
+		return msg ~ " Prefix variable name with underscore to ignore";
+
 	if (rest.skipOver("Variable") &&
 		rest.canFind("is never modified and could have been declared const or immutable"))
 		return []; // currently gives to many false positives
+
 	if (rest.skipOver("Public declaration") &&
 		rest.canFind("is undocumented"))
 		return [];
+
 	if (rest.skipOver("Line is longer than") &&
 		rest.canFind("characters"))
 		return [];
+
 	if (rest.skipOver("Template name") &&
 		rest.canFind("does not match style guidelines"))
 		return [];
+
 	return msg;
 }
 
