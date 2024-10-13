@@ -237,9 +237,8 @@ int main(scope Cmd cmd) {
 	int lntES; // lint exit status
 	if (lnt.use) {
 		lntES = lnt.pp.pid.wait();
-		if (lntES == -11) {
+		if (lntES == -11)
 			warn(exeDscanner, " failed with exit status ", lntES, " (segmentation fault)");
-		}
 		if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
 		if (lnt.redirect != Redirect.init) {
 			foreach (ref ln; lnt.pp.stdout.byLine) {
