@@ -337,6 +337,7 @@ private const(char)[] filterDscannerMessage(return const(char)[] msg) pure /+not
 		rest.canFind("is never used"))
 		return [];
 
+	// See_Also: https://github.com/Dlang-UPB/D-scanner/issues/160
 	if (rest.skipOver("Parameter ") &&
 		rest.canFind("is never used"))
 		return msg ~ " Prefix parameter name with underscore to ignore";
