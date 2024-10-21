@@ -34,7 +34,7 @@ static immutable dExt = `.d`;
 static immutable dbgFlag = false; // Flags for debug logging via `dbg`.
 
 import std.process : ProcessPipes, Redirect, pipeProcess, wait;
-import std.algorithm : count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit, either, findSplitAfter;
+import std.algorithm : map, count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit, either, findSplitAfter;
 import std.array : array, join, replace;
 import std.path : expandTilde, baseName, stripExtension, buildPath;
 import std.file : exists, getcwd, dirEntries, SpanMode, getSize, remove, readText, tempDir, mkdirRecurse;
@@ -224,9 +224,9 @@ int main(scope Cmd cmd) {
 			chk.outLines = chk.pp.stdout.byLine.join('\n');
 			chk.errLines = chk.pp.stderr.byLine.join('\n');
 			if (chk.outLines.length)
-				stdout.writeln(chk.outLines);
+				stdout.writeln(chk.outLines, " [check]");
 			if (chk.errLines.length)
-				stderr.writeln(chk.errLines);
+				stderr.writeln(chk.errLines, " [check]");
 		}
 		if (chkExitEarlyUponFailure && chkES) {
 			if (dbgFlag) dbg("xdmd: Exiting eagerly because check failed, potentially aborting other phases");
@@ -243,12 +243,12 @@ int main(scope Cmd cmd) {
 		if (lnt.redirect != Redirect.init) {
 			foreach (ref ln; lnt.pp.stdout.byLine) {
 				if (const lnF = ln.filterDscannerMessage) {
-					stderr.writeln(lnF); // forward to stderr for now
+					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
 				}
 			}
 			foreach (ref ln; lnt.pp.stderr.byLine) {
 				if (const lnF = ln.filterDscannerMessage) {
-					stderr.writeln(lnF); // forward to stderr for now
+					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
 				}
 			}
 		}
@@ -260,8 +260,8 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Run exit status: ", runES);
 		if (redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Run is redirected");
-			auto runOut = run.pp.stdout.byLine.join('\n');
-			auto runErr = run.pp.stderr.byLine.join('\n');
+			auto runOut = run.pp.stdout.byLine.map!(ln => ln ~ " [run]").join('\n');
+			auto runErr = run.pp.stderr.byLine.map!(ln => ln ~ " [run]").join('\n');
 			runOut.skipOver(chk.outLines);
 			runErr.skipOver(chk.errLines);
 			if (runOut.length)
