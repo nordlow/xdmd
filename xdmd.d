@@ -365,6 +365,9 @@ private const(char)[] filterDscannerLintMessage(return const(char)[] msg) pure /
 	if (rest.canFind("has method 'opEquals', but not 'toHash'"))
 		return [];
 
+	if (rest.canFind("is never modified and could have been declared const or immutable"))
+		return [];
+
 	return msg;
 }
 
