@@ -365,6 +365,7 @@ private const(char)[] filterDscannerLintMessage(return const(char)[] msg) pure /
 	if (rest.canFind("has method 'opEquals', but not 'toHash'"))
 		return [];
 
+	// TODO: Remove when DScanner don't emit false positives for lint.
 	if (rest.canFind("is never modified and could have been declared const or immutable"))
 		return [];
 
