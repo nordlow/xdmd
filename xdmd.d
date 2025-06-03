@@ -242,12 +242,12 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
 		if (lnt.redirect != Redirect.init) {
 			foreach (ref ln; lnt.pp.stdout.byLine) {
-				if (const lnF = ln.filterDscannerMessage) {
+				if (const lnF = ln.filterDscannerLintMessage) {
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
 				}
 			}
 			foreach (ref ln; lnt.pp.stderr.byLine) {
-				if (const lnF = ln.filterDscannerMessage) {
+				if (const lnF = ln.filterDscannerLintMessage) {
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
 				}
 			}
@@ -326,7 +326,7 @@ int main(scope Cmd cmd) {
 	return 0;
 }
 
-private const(char)[] filterDscannerMessage(return const(char)[] msg) pure /+nothrow+/ {
+private const(char)[] filterDscannerLintMessage(return const(char)[] msg) pure /+nothrow+/ {
 	auto split = msg.findSplitAfter("Warning: ");
 	if (!split)
 		return [];
@@ -360,6 +360,9 @@ private const(char)[] filterDscannerMessage(return const(char)[] msg) pure /+not
 
 	if (rest.skipOver("Template name") &&
 		rest.canFind("does not match style guidelines"))
+		return [];
+
+	if (rest.canFind("has method 'opEquals', but not 'toHash'"))
 		return [];
 
 	return msg;
