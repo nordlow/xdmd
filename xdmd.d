@@ -49,13 +49,20 @@ struct Task {
 
 		// force use ldc if sanitizers has been asked for
 		static immutable sanitizeAddressFlag = "-fsanitize=address";
-		if (switches.count(sanitizeAddressFlag) >= 1) {
+		if (switches.canFind(sanitizeAddressFlag)) {
 			const exeLDMD2 = findExecutable(FileName(`ldmd2`));
 			if (tt == TaskType.run && exeLDMD2) {
 				exe = exeLDMD2; // override
-			}  else {
-				cmdArgs = cmdArgs.filter!(_ => _ != sanitizeAddressFlag).array; // TODO: merge with filter below
 			}
+			cmdArgs = cmdArgs.filter!(_ => _ != sanitizeAddressFlag).array; // TODO: merge with filter below
+		}
+
+		// force usage of dmd when checking
+		const chkdmd = "-chk=dmd";
+		if (cmdArgs.canFind(chkdmd)) {
+			if (const exeDMD = findExecutable(FileName(`dmd`)))
+				exe = exeDMD; // override
+			cmdArgs = cmdArgs.filter!(_ => _ != chkdmd).array; // TODO: merge with filter below
 		}
 
 		// debug writeln("In ", cwd, ": ", tt, ": ", (exe.str ~ cmdArgs).join(' '));
