@@ -205,7 +205,7 @@ int main(scope Cmd cmd) {
 		}
 	}
 
-	const exeChk = either(exeDMD, exeLDMD2,); // `ldmd2` used to be fastest at check but isn't anymore
+	const exeChk = either(exeDMD, exeLDMD2); // `ldmd2` used to be fastest at check but isn't anymore
 	const exeRun = either(exeDMD, exeLDMD2); // `dmd` fastest at compiling/building
 	const exeDrn = FilePath("/home/per/Work/dmd/compiler/test/run.d"); // TODO: Lookup relative path instead
 
