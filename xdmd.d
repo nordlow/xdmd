@@ -331,7 +331,7 @@ int main(scope Cmd cmd) {
 /++ Returns: Range over diagnostics messages in `lines`. +/
 auto byMessage(Range)(Range lines)
 if (is(typeof(Range.front) : const(char)[])) {
-	return lines.chunkBy!((_a, b) => !(b.canFind("Warning: ") || b.canFind("Error: ") || b.canFind("Coverage: ")))();
+	return lines.chunkBy!((a, b) => (a.canFind("Warning: ") || a.canFind("Error: ") || a.canFind("Coverage: ")) && !(b.canFind("Warning: ") || b.canFind("Error: ") || b.canFind("Coverage: ")))().map!(a => a.join('\n'));
 }
 
 bool canFindAmong(alias pred = eq, T)(in T[] haystack, in T[] needles) @trusted {
