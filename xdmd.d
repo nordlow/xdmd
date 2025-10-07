@@ -234,11 +234,12 @@ int main(scope Cmd cmd) {
 					stdout.writeln(lnF, " [check]");
 				}
 			}
-			foreach (ref ln; lnt.pp.stderr.byLine)
+			foreach (ref ln; lnt.pp.stderr.byLine) {
 				if (const lnF = ln.filterDMDMessage) {
 					chk.errLines ~= ln;
 					stdout.writeln(lnF, " [check]");
 				}
+			}
 		}
 		if (chkExitEarlyUponFailure && chkES) {
 			if (dbgFlag) dbg("xdmd: Exiting eagerly because check failed, potentially aborting other phases");
@@ -269,14 +270,16 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Run exit status: ", runES);
 		if (redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Run is redirected");
-			auto runOut = run.pp.stdout.byLine.map!(ln => ln ~ " [run]").join('\n');
-			auto runErr = run.pp.stderr.byLine.map!(ln => ln ~ " [run]").join('\n');
-			runOut.skipOver(chk.outLines);
-			runErr.skipOver(chk.errLines);
-			if (runOut.length)
-				stdout.writeln(runOut);
-			if (runErr.length)
-				stderr.writeln(runErr);
+			foreach (ref ln; run.pp.stdout.byLine) {
+				if (const lnF = ln.filterDMDMessage) {
+					stdout.writeln(lnF, " [run]");
+				}
+			}
+			foreach (ref ln; run.pp.stderr.byLine) {
+				if (const lnF = ln.filterDMDMessage) {
+					stdout.writeln(lnF, " [run]");
+				}
+			}
 		}
 		if (runES) {
 			// don't 'return runES here to let lntES complete
@@ -337,11 +340,7 @@ int main(scope Cmd cmd) {
 
 /++ Filter DMD message `msg`. +/
 private const(char)[] filterDMDMessage(return const(char)[] msg) pure /+nothrow+/ {
-	auto split = msg.findSplitAfter("Warning: ");
-	if (!split)
-		return [];
-	auto rest = split[1];
-	if (rest.canFind("cannot inline function"))
+	if (msg.canFind("cannot inline function"))
 		return [];
 	return msg;
 }
