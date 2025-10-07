@@ -329,11 +329,25 @@ int main(scope Cmd cmd) {
 }
 
 /++ Returns: Range over diagnostics messages in `lines`. +/
-auto byMessage(Range)(Range lines)
-if (is(typeof(Range.front) : const(char)[])) {
-	return lines;
-	version(none)
-	return lines.chunkBy!((a, b) => (a.canFind("Warning: ") || a.canFind("Error: ") || a.canFind("Coverage: ")) && !(b.canFind("Warning: ") || b.canFind("Error: ") || b.canFind("Coverage: ")))().map!(a => a.join('\n'));
+auto byMessage(Range)(Range lines) {
+	static struct Result {
+		void popFront() in(!empty) {
+			_front = []; // new message
+			while (!_input.empty && !(_input.front.canFind("Warning: ") || _input.front.canFind("Error: ") || _input.front.canFind("Coverage: "))) {
+				if (_front.length)
+					_front ~= '\n';
+				_front ~= _input.front;
+				_input.popFront();
+			}
+		}
+	@property:
+		bool empty() const scope => !_front;
+		string front() in(!empty) => _front;
+	private:
+		Range _input;
+		string _front; ///< Current message.
+	}
+	return Result(lines);
 }
 
 bool canFindAmong(alias pred = eq, T)(in T[] haystack, in T[] needles) @trusted {
