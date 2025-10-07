@@ -228,18 +228,12 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Check exit status: ", chkES);
 		if (redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Check is redirected");
-			foreach (ref ln; lnt.pp.stdout.byLine) {
-				if (const lnF = ln.filterDMDMessage) {
-					chk.outLines ~= ln;
+			foreach (ref ln; chk.pp.stdout.byLine.byMessage)
+				if (const lnF = ln.join('\n').filterDMDMessage)
 					stdout.writeln(lnF, " [check]");
-				}
-			}
-			foreach (ref ln; lnt.pp.stderr.byLine) {
-				if (const lnF = ln.filterDMDMessage) {
-					chk.errLines ~= ln;
-					stdout.writeln(lnF, " [check]");
-				}
-			}
+			foreach (ref ln; chk.pp.stderr.byLine.byMessage)
+				if (const lnF = ln.join('\n').filterDMDMessage)
+					stderr.writeln(lnF, " [check]");
 		}
 		if (chkExitEarlyUponFailure && chkES) {
 			if (dbgFlag) dbg("xdmd: Exiting eagerly because check failed, potentially aborting other phases");
@@ -255,11 +249,11 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
 		if (lnt.redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Lint is redirected");
-			foreach (ref ln; lnt.pp.stdout.byLine)
-				if (const lnF = ln.filterDscannerMessage)
+			foreach (ref ln; lnt.pp.stdout.byLine.byMessage)
+				if (const lnF = ln.join('\n').filterDscannerMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
-			foreach (ref ln; lnt.pp.stderr.byLine)
-				if (const lnF = ln.filterDscannerMessage)
+			foreach (ref ln; lnt.pp.stderr.byLine.byMessage)
+				if (const lnF = ln.join('\n').filterDscannerMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
 		}
 	}
@@ -270,16 +264,12 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Run exit status: ", runES);
 		if (redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Run is redirected");
-			foreach (ref ln; run.pp.stdout.byLine) {
-				if (const lnF = ln.filterDMDMessage) {
+			foreach (ref ln; run.pp.stdout.byLine.byMessage)
+				if (const lnF = ln.join('\n').filterDMDMessage)
 					stdout.writeln(lnF, " [run]");
-				}
-			}
-			foreach (ref ln; run.pp.stderr.byLine) {
-				if (const lnF = ln.filterDMDMessage) {
-					stdout.writeln(lnF, " [run]");
-				}
-			}
+			foreach (ref ln; run.pp.stderr.byLine.byMessage)
+				if (const lnF = ln.join('\n').filterDMDMessage)
+					stderr.writeln(lnF, " [run]");
 		}
 		if (runES) {
 			// don't 'return runES here to let lntES complete
@@ -336,6 +326,51 @@ int main(scope Cmd cmd) {
 	}
 
 	return 0;
+}
+
+/++ Returns: Range over diagnostics messages in `lines`. +/
+auto byMessage(Range)(Range lines)
+if (is(typeof(Range.front) : const(char)[])) {
+	return lines.chunkBy!((_a, b) => !(b.canFind("Warning: ") || b.canFind("Error: ") || b.canFind("Coverage: ")))();
+}
+
+bool canFindAmong(alias pred = eq, T)(in T[] haystack, in T[] needles) @trusted {
+	static if (is(T : const(char)))
+		foreach (const ref needle; needles)
+			assert(needle < 128); // See_Also: https://forum.dlang.org/post/sjirukypxmmcgdmqbcpe@forum.dlang.org
+	if (haystack.length == 0)
+		return false;
+	// TODO: Extend to enum or use `StaticDenseSet`
+	static if (T.sizeof == 1 && __traits(isSame, pred, eq)) {
+		enum n = 2^^(8*T.sizeof); // number of possible `T` values
+		size_t[n / size_t.sizeof] set; // set of needles to search
+		import core.bitop : bt, bts;
+		foreach (const ref needle; needles) // construct set
+			bts(&set[0], cast(ubyte)needle);
+		foreach (const ref elm; haystack) // use set
+			if (bt(&set[0], cast(ubyte)elm))
+				return true;
+	} else {
+		foreach (const ref elm; haystack)
+			foreach (const ref needle; needles)
+				if (pred(elm, needle))
+					return true;
+	}
+	return false;
+}
+
+/// Returns: `true` iff `a` and `b` are equal.
+bool eq(T)(T a, T b) {
+	return a == b;
+	version(none) {
+		// TODO: Activate this or move to compiler: Find plain memory region of
+		// plain old data to compare:
+		enum isArray = is(T U : U[]);
+		static if (!isArray && __traits(isPOD, T) && T.sizeof >= _sizeMin_memcmp) {
+			import core.sys.linux.string : memcmp;
+			return memcmp(&a, &b, T.sizeof) == 0;
+		}
+	}
 }
 
 /++ Filter DMD message `msg`. +/
