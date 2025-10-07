@@ -333,7 +333,7 @@ auto byMessage(Range)(Range lines) {
 	static struct Result {
 		void popFront() in(!empty) {
 			_front = []; // new message
-			while (!_input.empty && !(_input.front.canFind("Warning: ") || _input.front.canFind("Error: ") || _input.front.canFind("Coverage: "))) {
+			while (!_input.empty && !(_input.front.canFind(": Warning: ") || _input.front.canFind(": Error: ") || _input.front.canFind(": Coverage: "))) {
 				if (_front.length)
 					_front ~= '\n';
 				_front ~= _input.front;
