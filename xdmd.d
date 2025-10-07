@@ -342,7 +342,7 @@ auto byMessage(Range)(Range lines) {
 		}
 	@property:
 		bool empty() const scope => !_front;
-		string front() in(!empty) => _front;
+		auto front() inout scope in(!empty) => _front;
 	private:
 		Range _input;
 		string _front; ///< Current message.
