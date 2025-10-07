@@ -33,6 +33,7 @@ static immutable lstExt = `.lst`;
 static immutable dExt = `.d`;
 static immutable dbgFlag = false; // Flags for debug logging via `dbg`.
 
+import std.range.primitives : isInputRange, empty, front, popFront;
 import std.process : ProcessPipes, Redirect, pipeProcess, wait;
 import std.algorithm : map, count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit, either, findSplitAfter, chunkBy;
 import std.array : array, join, replace;
@@ -333,11 +334,10 @@ auto byMessage(Range)(Range lines) {
 	static struct Result {
 		void popFront() in(!empty) {
 			_front = []; // reset message
-			while (!_input.empty && !(_input.front.canFind(": Warning: ") || _input.front.canFind(": Error: ") || _input.front.canFind(": Coverage: "))) {
-				if (_front.length)
-					_front ~= '\n';
-				_front ~= _input.front;
-				_input.popFront();
+			if (!_input.empty)
+				_front ~= _input.takeFront;
+			while (!_input.empty && !(_input.front.canFind(": Warning: ") || _input.front.canFind(": Error: "))) {
+				_front ~= '\n' ~ _input.takeFront;
 			}
 		}
 	@property:
@@ -350,6 +350,14 @@ auto byMessage(Range)(Range lines) {
 	return Result(lines);
 }
 
+auto takeFront(R)(ref R r) if (!is(R : E[], E) && isInputRange!R) in(!r.empty) {
+	static if (is(typeof(r.frontPop))) {
+		return r.frontPop;
+	} else {
+		scope(exit) r.popFront();
+		return r.front();
+	}
+}
 bool canFindAmong(alias pred = eq, T)(in T[] haystack, in T[] needles) @trusted {
 	static if (is(T : const(char)))
 		foreach (const ref needle; needles)
