@@ -229,10 +229,10 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Check exit status: ", chkES);
 		if (redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Check is redirected");
-			foreach (ref ln; chk.pp.stdout.byLine.byDMessage)
+			foreach (ref ln; chk.pp.stdout.byLine)
 				if (const lnF = ln.filterDMDMessage)
 					stdout.writeln(lnF, " [check]");
-			foreach (ref ln; chk.pp.stderr.byLine.byDMessage)
+			foreach (ref ln; chk.pp.stderr.byLine)
 				if (const lnF = ln.filterDMDMessage)
 					stderr.writeln(lnF, " [check]");
 		}
@@ -250,10 +250,10 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
 		if (lnt.redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Lint is redirected");
-			foreach (ref ln; lnt.pp.stdout.byLine.byDMessage)
+			foreach (ref ln; lnt.pp.stdout.byLine)
 				if (const lnF = ln.filterDscannerMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
-			foreach (ref ln; lnt.pp.stderr.byLine.byDMessage)
+			foreach (ref ln; lnt.pp.stderr.byLine)
 				if (const lnF = ln.filterDscannerMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
 		}
@@ -264,12 +264,12 @@ int main(scope Cmd cmd) {
 		runES = run.pp.pid.wait();
 		if (dbgFlag) dbg("xdmd: Run exit status: ", runES);
 		if (redirect != Redirect.init) {
-			foreach (ref ln; run.pp.stdout.byLine.byDMessage) {
+			foreach (ref ln; run.pp.stdout.byLine) {
 				if (const lnF = ln.filterDMDMessage) {
 					stdout.writeln(lnF, " [run]");
 				}
 			}
-			foreach (ref ln; run.pp.stderr.byLine.byDMessage) {
+			foreach (ref ln; run.pp.stderr.byLine) {
 				if (const lnF = ln.filterDMDMessage) {
 					stderr.writeln(lnF, " [run]");
 				}
