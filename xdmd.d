@@ -229,10 +229,10 @@ int main(scope Cmd cmd) {
 		if (redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Check is redirected");
 			foreach (ref ln; chk.pp.stdout.byLine.byMessage)
-				if (const lnF = ln.join('\n').filterDMDMessage)
+				if (const lnF = ln.filterDMDMessage)
 					stdout.writeln(lnF, " [check]");
 			foreach (ref ln; chk.pp.stderr.byLine.byMessage)
-				if (const lnF = ln.join('\n').filterDMDMessage)
+				if (const lnF = ln.filterDMDMessage)
 					stderr.writeln(lnF, " [check]");
 		}
 		if (chkExitEarlyUponFailure && chkES) {
@@ -250,10 +250,10 @@ int main(scope Cmd cmd) {
 		if (lnt.redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Lint is redirected");
 			foreach (ref ln; lnt.pp.stdout.byLine.byMessage)
-				if (const lnF = ln.join('\n').filterDscannerMessage)
+				if (const lnF = ln.filterDscannerMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
 			foreach (ref ln; lnt.pp.stderr.byLine.byMessage)
-				if (const lnF = ln.join('\n').filterDscannerMessage)
+				if (const lnF = ln.filterDscannerMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
 		}
 	}
@@ -265,10 +265,10 @@ int main(scope Cmd cmd) {
 		if (redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Run is redirected");
 			foreach (ref ln; run.pp.stdout.byLine.byMessage)
-				if (const lnF = ln.join('\n').filterDMDMessage)
+				if (const lnF = ln.filterDMDMessage)
 					stdout.writeln(lnF, " [run]");
 			foreach (ref ln; run.pp.stderr.byLine.byMessage)
-				if (const lnF = ln.join('\n').filterDMDMessage)
+				if (const lnF = ln.filterDMDMessage)
 					stderr.writeln(lnF, " [run]");
 		}
 		if (runES) {
@@ -331,6 +331,8 @@ int main(scope Cmd cmd) {
 /++ Returns: Range over diagnostics messages in `lines`. +/
 auto byMessage(Range)(Range lines)
 if (is(typeof(Range.front) : const(char)[])) {
+	return lines;
+	version(none)
 	return lines.chunkBy!((a, b) => (a.canFind("Warning: ") || a.canFind("Error: ") || a.canFind("Coverage: ")) && !(b.canFind("Warning: ") || b.canFind("Error: ") || b.canFind("Coverage: ")))().map!(a => a.join('\n'));
 }
 
