@@ -229,10 +229,10 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Check exit status: ", chkES);
 		if (redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Check is redirected");
-			foreach (ref ln; chk.pp.stdout.byLine.byMessage)
+			foreach (ref ln; chk.pp.stdout.byLine.byDMessage)
 				if (const lnF = ln.filterDMDMessage)
 					stdout.writeln(lnF, " [check]");
-			foreach (ref ln; chk.pp.stderr.byLine.byMessage)
+			foreach (ref ln; chk.pp.stderr.byLine.byDMessage)
 				if (const lnF = ln.filterDMDMessage)
 					stderr.writeln(lnF, " [check]");
 		}
@@ -250,10 +250,10 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
 		if (lnt.redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Lint is redirected");
-			foreach (ref ln; lnt.pp.stdout.byLine.byMessage)
+			foreach (ref ln; lnt.pp.stdout.byLine.byDMessage)
 				if (const lnF = ln.filterDscannerMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
-			foreach (ref ln; lnt.pp.stderr.byLine.byMessage)
+			foreach (ref ln; lnt.pp.stderr.byLine.byDMessage)
 				if (const lnF = ln.filterDscannerMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
 		}
@@ -265,10 +265,10 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Run exit status: ", runES);
 		if (redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Run is redirected");
-			foreach (ref ln; run.pp.stdout.byLine.byMessage)
+			foreach (ref ln; run.pp.stdout.byLine.byDMessage)
 				if (const lnF = ln.filterDMDMessage)
 					stdout.writeln(lnF, " [run]");
-			foreach (ref ln; run.pp.stderr.byLine.byMessage)
+			foreach (ref ln; run.pp.stderr.byLine.byDMessage)
 				if (const lnF = ln.filterDMDMessage)
 					stderr.writeln(lnF, " [run]");
 		}
@@ -329,8 +329,8 @@ int main(scope Cmd cmd) {
 	return 0;
 }
 
-/++ Returns: Range over diagnostics messages in `lines`. +/
-auto byMessage(Range)(Range lines) {
+/++ Returns: Range over D compiler diagnostics messages in `lines`. +/
+auto byDMessage(Range)(Range lines) {
 	static struct Result {
 		void popFront() in(!empty) {
 			_front = []; // reset message
