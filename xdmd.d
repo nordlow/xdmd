@@ -228,12 +228,17 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Check exit status: ", chkES);
 		if (redirect != Redirect.init) {
 			if (dbgFlag) dbg("xdmd: Check is redirected");
-			chk.outLines = chk.pp.stdout.byLine.join('\n');
-			chk.errLines = chk.pp.stderr.byLine.join('\n');
-			if (chk.outLines.length)
-				stdout.writeln(chk.outLines, " [check]");
-			if (chk.errLines.length)
-				stderr.writeln(chk.errLines, " [check]");
+			foreach (ref ln; lnt.pp.stdout.byLine) {
+				if (const lnF = ln.filterDMDMessage) {
+					chk.outLines ~= ln;
+					stdout.writeln(lnF, " [check]");
+				}
+			}
+			foreach (ref ln; lnt.pp.stderr.byLine)
+				if (const lnF = ln.filterDMDMessage) {
+					chk.errLines ~= ln;
+					stdout.writeln(lnF, " [check]");
+				}
 		}
 		if (chkExitEarlyUponFailure && chkES) {
 			if (dbgFlag) dbg("xdmd: Exiting eagerly because check failed, potentially aborting other phases");
@@ -248,15 +253,13 @@ int main(scope Cmd cmd) {
 			warn(exeDscanner, " failed with exit status ", lntES, " (segmentation fault)");
 		if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
 		if (lnt.redirect != Redirect.init) {
-			foreach (ref ln; lnt.pp.stdout.byLine) {
+			if (dbgFlag) dbg("xdmd: Lint is redirected");
+			foreach (ref ln; lnt.pp.stdout.byLine)
 				if (const lnF = ln.filterDscannerMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
-			}
-			foreach (ref ln; lnt.pp.stderr.byLine) {
-				if (const lnF = ln.filterDscannerMessage) {
+			foreach (ref ln; lnt.pp.stderr.byLine)
+				if (const lnF = ln.filterDscannerMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
-				}
-			}
 		}
 	}
 
@@ -330,6 +333,17 @@ int main(scope Cmd cmd) {
 	}
 
 	return 0;
+}
+
+/++ Filter DMD message `msg`. +/
+private const(char)[] filterDMDMessage(return const(char)[] msg) pure /+nothrow+/ {
+	auto split = msg.findSplitAfter("Warning: ");
+	if (!split)
+		return [];
+	auto rest = split[1];
+	if (rest.canFind("cannot inline function"))
+		return [];
+	return msg;
 }
 
 /++ Filter DScanner message `msg`. +/
