@@ -34,7 +34,7 @@ static immutable dExt = `.d`;
 static immutable dbgFlag = false; // Flags for debug logging via `dbg`.
 
 import std.process : ProcessPipes, Redirect, pipeProcess, wait;
-import std.algorithm : map, count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit, either, findSplitAfter;
+import std.algorithm : map, count, filter, endsWith, startsWith, canFind, findSplitAfter, skipOver, findSplit, either, findSplitAfter, chunkBy;
 import std.array : array, join, replace;
 import std.path : expandTilde, baseName, stripExtension, buildPath;
 import std.file : exists, getcwd, dirEntries, SpanMode, getSize, remove, readText, tempDir, mkdirRecurse;
@@ -249,9 +249,8 @@ int main(scope Cmd cmd) {
 		if (dbgFlag) dbg("xdmd: Lint exit status: ", lntES);
 		if (lnt.redirect != Redirect.init) {
 			foreach (ref ln; lnt.pp.stdout.byLine) {
-				if (const lnF = ln.filterDscannerLintMessage) {
+				if (const lnF = ln.filterDscannerLintMessage)
 					stderr.writeln(lnF, " [lint]"); // forward to stderr for now
-				}
 			}
 			foreach (ref ln; lnt.pp.stderr.byLine) {
 				if (const lnF = ln.filterDscannerLintMessage) {
@@ -333,40 +332,33 @@ int main(scope Cmd cmd) {
 	return 0;
 }
 
+/++ Filter DMD or DScanner message `msg`. +/
 private const(char)[] filterDscannerLintMessage(return const(char)[] msg) pure /+nothrow+/ {
 	auto split = msg.findSplitAfter("Warning: ");
 	if (!split)
 		return [];
 	auto rest = split[1];
 
-	if ((rest.skipOver("Parameter _") ||
-		 rest.skipOver("Variable _")) &&
-		rest.canFind("is never used"))
+	if ((rest.skipOver("Parameter _") || rest.skipOver("Variable _")) && rest.canFind("is never used"))
 		return [];
 
 	// See_Also: https://github.com/Dlang-UPB/D-scanner/issues/160
-	if (rest.skipOver("Parameter ") &&
-		rest.canFind("is never used"))
+	if (rest.skipOver("Parameter ") && rest.canFind("is never used"))
 		return msg ~ " Prefix parameter name with underscore to ignore";
 
-	if (rest.skipOver("Variable ") &&
-		rest.canFind("is never used"))
+	if (rest.skipOver("Variable ") && rest.canFind("is never used"))
 		return msg ~ " Prefix variable name with underscore to ignore";
 
-	if (rest.skipOver("Variable") &&
-		rest.canFind("is never modified and could have been declared const or immutable"))
+	if (rest.skipOver("Variable") && rest.canFind("is never modified and could have been declared const or immutable"))
 		return []; // currently gives to many false positives
 
-	if (rest.skipOver("Public declaration") &&
-		rest.canFind("is undocumented"))
+	if (rest.skipOver("Public declaration") && rest.canFind("is undocumented"))
 		return [];
 
-	if (rest.skipOver("Line is longer than") &&
-		rest.canFind("characters"))
+	if (rest.skipOver("Line is longer than") && rest.canFind("characters"))
 		return [];
 
-	if (rest.skipOver("Template name") &&
-		rest.canFind("does not match style guidelines"))
+	if (rest.skipOver("Template name") && rest.canFind("does not match style guidelines"))
 		return [];
 
 	if (rest.canFind("has method 'opEquals', but not 'toHash'"))
