@@ -329,7 +329,9 @@ int main(scope Cmd cmd) {
 	return 0;
 }
 
-/++ Returns: Range over D compiler diagnostics messages in `lines`. +/
+/++ Returns: Range over D compiler diagnostics messages in `lines`.
+	TODO: Move to phobos-next.
+ +/
 auto byDMessage(Range)(Range lines) {
 	static struct Result {
 		void popFront() in(!empty) {
@@ -350,6 +352,7 @@ auto byDMessage(Range)(Range lines) {
 	return Result(lines);
 }
 
+// TODO: Reuse phobos-next
 auto takeFront(R)(ref R r) if (!is(R : E[], E) && isInputRange!R) in(!r.empty) {
 	static if (is(typeof(r.frontPop))) {
 		return r.frontPop;
@@ -358,6 +361,8 @@ auto takeFront(R)(ref R r) if (!is(R : E[], E) && isInputRange!R) in(!r.empty) {
 		return r.front();
 	}
 }
+
+// TODO: Reuse phobos-next
 bool canFindAmong(alias pred = eq, T)(in T[] haystack, in T[] needles) @trusted {
 	static if (is(T : const(char)))
 		foreach (const ref needle; needles)
