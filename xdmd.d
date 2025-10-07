@@ -264,13 +264,16 @@ int main(scope Cmd cmd) {
 		runES = run.pp.pid.wait();
 		if (dbgFlag) dbg("xdmd: Run exit status: ", runES);
 		if (redirect != Redirect.init) {
-			if (dbgFlag) dbg("xdmd: Run is redirected");
-			foreach (ref ln; run.pp.stdout.byLine.byDMessage)
-				if (const lnF = ln.filterDMDMessage)
+			foreach (ref ln; run.pp.stdout.byLine.byDMessage) {
+				if (const lnF = ln.filterDMDMessage) {
 					stdout.writeln(lnF, " [run]");
-			foreach (ref ln; run.pp.stderr.byLine.byDMessage)
-				if (const lnF = ln.filterDMDMessage)
+				}
+			}
+			foreach (ref ln; run.pp.stderr.byLine.byDMessage) {
+				if (const lnF = ln.filterDMDMessage) {
 					stderr.writeln(lnF, " [run]");
+				}
+			}
 		}
 		if (runES) {
 			// don't 'return runES here to let lntES complete
@@ -330,6 +333,9 @@ int main(scope Cmd cmd) {
 }
 
 /++ Returns: Range over D compiler diagnostics messages in `lines`.
+
+	Not needed if dmd flag `-verrors=simple` is used.
+
 	TODO: Move to phobos-next.
  +/
 auto byDMessage(Range)(Range lines) {
