@@ -332,7 +332,7 @@ int main(scope Cmd cmd) {
 auto byMessage(Range)(Range lines) {
 	static struct Result {
 		void popFront() in(!empty) {
-			_front = []; // new message
+			_front = []; // reset message
 			while (!_input.empty && !(_input.front.canFind(": Warning: ") || _input.front.canFind(": Error: ") || _input.front.canFind(": Coverage: "))) {
 				if (_front.length)
 					_front ~= '\n';
